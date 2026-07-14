@@ -26,7 +26,7 @@ export function readConfig():Config{
 }
 
 function getConfigFilePath(): string{
-    return path.join(os.homedir(),"gatorconfig.json")
+    return path.join(os.homedir(),".gatorconfig.json")
 }
 
 // validate that json is valid and convert to camelcase obj
