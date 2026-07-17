@@ -1,6 +1,6 @@
 import { exit } from "node:process";
-import { setUser } from "./config";
-import { createUser, getUser } from "./db/queries/users";
+import { readConfig, setUser } from "./config";
+import { createUser, getUser, getUsers, resetUsers } from "./db/queries/users";
 
 export type CommandsRegistry = Record<string, CommandHandler>
 
@@ -56,3 +56,20 @@ export async function handlerRegister(name: string, ...args:string[]){
     setUser(args[0]);
 }
 
+// function to lsit all users through cli
+export async function handlerUsers(name: string, ...args:string[]){
+    //get current
+    const current = readConfig().currentUserName;
+    //get users from db and print
+    const users = await getUsers();
+    for(const u of users){
+        console.log(u.name === current ? "* " + u.name + " (current)" : "* " + u.name);
+    }
+}
+
+// function to reset the db through cli
+export async function handlerReset(name: string, ...args:string[]){
+    //add user to db
+    await resetUsers();
+    console.log("Users have been reset.");
+}

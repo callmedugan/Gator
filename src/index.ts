@@ -1,5 +1,5 @@
 import { readConfig, setUser } from "./config";
-import { CommandsRegistry, handlerLogin, handlerRegister, registerCommand, runCommand } from "./command";
+import { CommandsRegistry, handlerLogin, handlerRegister, handlerReset, handlerUsers, registerCommand, runCommand } from "./command";
 import process, { exit } from "node:process";
 
 async function main() {
@@ -7,6 +7,8 @@ async function main() {
   const registry:CommandsRegistry = {};
   registerCommand(registry, "login", handlerLogin);
   registerCommand(registry, "register", handlerRegister);
+  registerCommand(registry, "users", handlerUsers);
+  registerCommand(registry, "reset", handlerReset);
   //get the args that were supplied with the start command
   const args = process.argv.slice(2);
   if(args.length === 0){
