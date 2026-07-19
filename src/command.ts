@@ -1,6 +1,7 @@
 import { exit } from "node:process";
 import { readConfig, setUser } from "./config";
 import { createUser, getUser, getUsers, resetUsers } from "./db/queries/users";
+import { fetchFeed } from "./rss";
 
 export type CommandsRegistry = Record<string, CommandHandler>
 
@@ -72,4 +73,10 @@ export async function handlerReset(name: string, ...args:string[]){
     //add user to db
     await resetUsers();
     console.log("Users have been reset.");
+}
+
+// function to pull an rss feed 
+export async function handlerAgg(name: string, ...args:string[]){
+    const response = await fetchFeed("https://www.wagslane.dev/index.xml");
+    console.log(JSON.stringify(response, null, 2))
 }
