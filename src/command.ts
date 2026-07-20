@@ -4,6 +4,7 @@ import { createUser, getUser, getUserByID, getUsers, resetUsers, User } from "./
 import { createFeed, Feed, getFeedByURL, getFeeds } from "./db/queries/feed";
 import { fetchFeed } from "./rss";
 import { createFollowFeed, getFeedFollowsForUser } from "./db/queries/user_feed";
+import { userInfo } from "node:os";
 
 export type CommandsRegistry = Record<string, CommandHandler>
 
@@ -18,6 +19,20 @@ export async function runCommand(registry:CommandsRegistry, commandName:string, 
 }
 
 type CommandHandler = (commandName: string, ...args: string[]) => Promise<void>;
+
+//used for any commands that require the user to be logged in
+type UserCommandHandler = (commandName: string, user: User, ...args: string[]) => Promise<void>;
+
+export function getLoggedInHandler(handler: UserCommandHandler):CommandHandler{
+    return async (commandName:string, ...args:string[]) => {
+        const currentUser = await getUser(readConfig().currentUserName)
+        if(!currentUser){
+            console.log("user not logged in")
+            exit(1)
+        }
+        return handler(commandName, currentUser, ...args)
+    }
+}
 
 // function to login when called in cli
 export async function handlerLogin(name: string, ...args:string[]){
@@ -84,7 +99,7 @@ export async function handlerAgg(name: string, ...args:string[]){
 }
 
 // function to add a feed to db
-export async function handlerAddFeed(name: string, ...args:string[]){
+export async function handlerAddFeed(name: string, user:User, ...args:string[]){
     if(args.length < 2){
         console.log("expected name and url to be given")
         exit(1)
@@ -125,7 +140,7 @@ export async function handlerFeeds(name: string, ...args:string[]){
 }
 
 // function to create a user/feed relationship in the db
-export async function handlerFollow(name: string, ...args:string[]){
+export async function handlerFollow(name: string, user:User, ...args:string[]){
     if(args.length === 0){
         console.log("expected url to be given")
         exit(1)
@@ -146,7 +161,7 @@ export async function handlerFollow(name: string, ...args:string[]){
 }
 
 // function to print names of the feeds current user is following
-export async function handlerFollowing(name: string, ...args:string[]){
+export async function handlerFollowing(name: string, user:User, ...args:string[]){
     try{
         //get current user
         const currentUser:User = await getUser(readConfig().currentUserName);
