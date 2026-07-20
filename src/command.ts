@@ -1,8 +1,9 @@
 import { exit } from "node:process";
 import { readConfig, setUser } from "./config";
 import { createUser, getUser, getUserByID, getUsers, resetUsers, User } from "./db/queries/users";
-import { createFeed, Feed, getFeeds } from "./db/queries/feed";
+import { createFeed, Feed, getFeedByURL, getFeeds } from "./db/queries/feed";
 import { fetchFeed } from "./rss";
+import { createFollowFeed, getFeedFollowsForUser } from "./db/queries/user_feed";
 
 export type CommandsRegistry = Record<string, CommandHandler>
 
@@ -93,11 +94,12 @@ export async function handlerAddFeed(name: string, ...args:string[]){
         const read = readConfig().currentUserName;
         const currentUser:User = await getUser(read);
         // get url
-        name = args[0]
+        const feedName = args[0]
         const url = args[1];
         // create feed and add to db
-        const result:Feed = await createFeed(name, url, currentUser.id)
-        console.log(result);
+        const newFeed:Feed = await createFeed(feedName, url, currentUser.id)
+        const follow = await createFollowFeed(currentUser, newFeed)
+        console.log(newFeed);
         console.log(currentUser);
     }catch(err){
         if(err instanceof Error) console.log(err.message);
@@ -114,6 +116,44 @@ export async function handlerFeeds(name: string, ...args:string[]){
         for(const f of feeds){
             const user = await getUserByID(f.userID)
             console.log(f.name, f.url, user)
+        }
+    }catch(err){
+        if(err instanceof Error) console.log(err.message);
+        else console.log("unknown error")
+        exit(1)
+    }
+}
+
+// function to create a user/feed relationship in the db
+export async function handlerFollow(name: string, ...args:string[]){
+    if(args.length === 0){
+        console.log("expected url to be given")
+        exit(1)
+    }
+    try{
+        //get current user
+        const currentUser:User = await getUser(readConfig().currentUserName);
+        // get url
+        const url = args[0];
+        const feed:Feed = await getFeedByURL(url);
+        const newFeed = await createFollowFeed(currentUser, feed);
+        console.log(currentUser.name + " followed " + feed.name);
+    }catch(err){
+        if(err instanceof Error) console.log(err.message);
+        else console.log("unknown error")
+        exit(1)
+    }
+}
+
+// function to print names of the feeds current user is following
+export async function handlerFollowing(name: string, ...args:string[]){
+    try{
+        //get current user
+        const currentUser:User = await getUser(readConfig().currentUserName);
+        // get url
+        const following = await getFeedFollowsForUser(currentUser);
+        for(const f of following){
+            console.log(f.feed);
         }
     }catch(err){
         if(err instanceof Error) console.log(err.message);
