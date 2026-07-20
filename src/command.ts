@@ -3,7 +3,7 @@ import { readConfig, setUser } from "./config";
 import { createUser, getUser, getUserByID, getUsers, resetUsers, User } from "./db/queries/users";
 import { createFeed, Feed, getFeedByURL, getFeeds } from "./db/queries/feed";
 import { fetchFeed } from "./rss";
-import { createFollowFeed, getFeedFollowsForUser } from "./db/queries/user_feed";
+import { createFollowFeed, deleteFeedFollow, getFeedFollowsForUser } from "./db/queries/user_feed";
 import { userInfo } from "node:os";
 
 export type CommandsRegistry = Record<string, CommandHandler>
@@ -170,6 +170,25 @@ export async function handlerFollowing(name: string, user:User, ...args:string[]
         for(const f of following){
             console.log(f.feed);
         }
+    }catch(err){
+        if(err instanceof Error) console.log(err.message);
+        else console.log("unknown error")
+        exit(1)
+    }
+}
+
+// function to remove a user/feed relationship in the db
+export async function handlerUnfollow(name: string, user:User, ...args:string[]){
+    if(args.length === 0){
+        console.log("expected feed url to be given")
+        exit(1)
+    }
+    try{
+        // get url
+        const url = args[0];
+        const feed:Feed = await getFeedByURL(url);
+        const deleted = await deleteFeedFollow(user, feed);
+        if(deleted != undefined) console.log(user.name + " unfollowed " + feed.name);
     }catch(err){
         if(err instanceof Error) console.log(err.message);
         else console.log("unknown error")
