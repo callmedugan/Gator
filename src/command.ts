@@ -1,6 +1,7 @@
 import { exit } from "node:process";
 import { readConfig, setUser } from "./config";
-import { createUser, getUser, getUsers, resetUsers } from "./db/queries/users";
+import { createUser, getUser, getUsers, resetUsers, User } from "./db/queries/users";
+import { createFeed, Feed } from "./db/queries/feed";
 import { fetchFeed } from "./rss";
 
 export type CommandsRegistry = Record<string, CommandHandler>
@@ -79,4 +80,32 @@ export async function handlerReset(name: string, ...args:string[]){
 export async function handlerAgg(name: string, ...args:string[]){
     const response = await fetchFeed("https://www.wagslane.dev/index.xml");
     console.log(JSON.stringify(response, null, 2))
+}
+
+// function to add a feed to db
+export async function handlerAddFeed(name: string, ...args:string[]){
+    if(args.length === 0){
+        console.log("expected url to be given")
+        exit(1)
+    }
+    try{
+        //get current user
+        const read = readConfig().currentUserName;
+        const currentUser:User = await getUser(read);
+        // get url
+        const url = args[1];
+        // create feed and add to db
+        const result:Feed = await createFeed(name, url, currentUser.id)
+        printFeed(result, currentUser)
+    }catch(err){
+        if(err instanceof Error) console.log(err.message);
+        else console.log("unknown error")
+        exit(1)
+    }
+
+}
+
+function printFeed(feed:Feed, user:User){
+    console.log(feed);
+    console.log(user);
 }

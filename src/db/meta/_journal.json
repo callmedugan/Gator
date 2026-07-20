@@ -8,6 +8,20 @@
       "when": 1784275193607,
       "tag": "0000_demonic_steve_rogers",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784523016892,
+      "tag": "0001_shocking_jack_flag",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784526325958,
+      "tag": "0002_curious_sinister_six",
+      "breakpoints": true
     }
   ]
 }

@@ -21,12 +21,13 @@ export async function fetchFeed(url:string):Promise<RSSFeed>{
     const response = await fetch(url, {headers:{"User-Agent": "gator"}})
     const parser = new XMLParser({processEntities:false})
     const xml = parser.parse(await response.text())
-    //console.log(JSON.stringify(xml, null, 2))
+    //check for channel obj
     if(xml.rss?.channel === undefined){
         console.log("missing channel field from xml object")
         throw new Error("missing channel field from xml object");
     }
 
+    //create feed with channel fields
     const feed:RSSFeed = {
         channel: {
             title: xml.rss.channel?.title,
@@ -36,7 +37,9 @@ export async function fetchFeed(url:string):Promise<RSSFeed>{
         }
     }
 
+    //store item field and handle array vs singular item
     const xmlItem = xml.rss.channel?.item;
+    console.log(typeof xmlItem)
     if(Array.isArray(xmlItem)){
         for(const i of xmlItem){
             if(i.title === undefined || i.link === undefined || i.description === undefined || i.pubDate === undefined) continue;
@@ -61,3 +64,4 @@ export async function fetchFeed(url:string):Promise<RSSFeed>{
 
     return feed;
 }
+
