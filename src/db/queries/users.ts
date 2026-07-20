@@ -15,6 +15,12 @@ export async function getUser(name: string) {
     return result;
 }
 
+export async function getUserByID(id: string) {
+    if(id === "") throw new Error("blank id given for getUserByID")
+    const [result] = await db.select().from(users).where(eq(users.id, id));
+    return result;
+}
+
 export async function getUsers() {
     const result = await db.select().from(users);
     return result;

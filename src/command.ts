@@ -1,7 +1,7 @@
 import { exit } from "node:process";
 import { readConfig, setUser } from "./config";
-import { createUser, getUser, getUsers, resetUsers, User } from "./db/queries/users";
-import { createFeed, Feed } from "./db/queries/feed";
+import { createUser, getUser, getUserByID, getUsers, resetUsers, User } from "./db/queries/users";
+import { createFeed, Feed, getFeeds } from "./db/queries/feed";
 import { fetchFeed } from "./rss";
 
 export type CommandsRegistry = Record<string, CommandHandler>
@@ -84,8 +84,8 @@ export async function handlerAgg(name: string, ...args:string[]){
 
 // function to add a feed to db
 export async function handlerAddFeed(name: string, ...args:string[]){
-    if(args.length === 0){
-        console.log("expected url to be given")
+    if(args.length < 2){
+        console.log("expected name and url to be given")
         exit(1)
     }
     try{
@@ -93,19 +93,31 @@ export async function handlerAddFeed(name: string, ...args:string[]){
         const read = readConfig().currentUserName;
         const currentUser:User = await getUser(read);
         // get url
+        name = args[0]
         const url = args[1];
         // create feed and add to db
         const result:Feed = await createFeed(name, url, currentUser.id)
-        printFeed(result, currentUser)
+        console.log(result);
+        console.log(currentUser);
     }catch(err){
         if(err instanceof Error) console.log(err.message);
         else console.log("unknown error")
         exit(1)
     }
-
 }
 
-function printFeed(feed:Feed, user:User){
-    console.log(feed);
-    console.log(user);
+// function to print all feeds in db
+export async function handlerFeeds(name: string, ...args:string[]){
+    try{
+        //get all feed items
+        const feeds = await getFeeds();
+        for(const f of feeds){
+            const user = await getUserByID(f.userID)
+            console.log(f.name, f.url, user)
+        }
+    }catch(err){
+        if(err instanceof Error) console.log(err.message);
+        else console.log("unknown error")
+        exit(1)
+    }
 }
