@@ -1,7 +1,7 @@
 import { exit } from "node:process";
 import { readConfig, setUser } from "./config";
 import { createUser, getUser, getUserByID, getUsers, resetUsers, User } from "./db/queries/users";
-import { createFeed, Feed, getFeedByURL, getFeeds } from "./db/queries/feed";
+import { createFeed, deleteFeedByURL, Feed, getFeedByURL, getFeeds, getNextFeedToFetch, markFeedFetched } from "./db/queries/feed";
 import { fetchFeed } from "./rss";
 import { createFollowFeed, deleteFeedFollow, getFeedFollowsForUser } from "./db/queries/user_feed";
 import { userInfo } from "node:os";
@@ -87,15 +87,68 @@ export async function handlerUsers(name: string, ...args:string[]){
 
 // function to reset the db through cli
 export async function handlerReset(name: string, ...args:string[]){
-    //add user to db
     await resetUsers();
     console.log("Users have been reset.");
 }
 
 // function to pull an rss feed 
 export async function handlerAgg(name: string, ...args:string[]){
-    const response = await fetchFeed("https://www.wagslane.dev/index.xml");
-    console.log(JSON.stringify(response, null, 2))
+    //const response = await fetchFeed("https://www.wagslane.dev/index.xml");
+    //console.log(JSON.stringify(response, null, 2))
+    let intervalDuration = 1000;
+    if(args.length === 0){
+        console.log("expected time between requests to be given in duration string ex: 1h, 1m, 1s, 1ms")
+        exit(1)
+    }
+    try{
+        //check for valid interval duration
+        intervalDuration = parseDuration(args[0]);
+        if(intervalDuration < 1000) throw new Error("interval must be at least 1s or 1000ms")
+        console.log("Collecting feeds every " + args[0])
+    }catch(err){
+        if(err instanceof Error) console.log(err.message);
+        else console.log("unknown error")
+        exit(1)
+    }
+    //start the aggregator
+    scrapeFeeds().catch(handleError)
+    //use set interval to repeat scrape feeds
+    const interval = setInterval(() => {
+        scrapeFeeds().catch(handleError);
+        }, intervalDuration);
+
+    //add listener for when program is killed to clear interval
+    await new Promise<void>((resolve) => {
+        process.on("SIGINT", () => {
+            console.log("Shutting down feed aggregator...");
+            clearInterval(interval);
+            resolve();
+        });
+    });
+}
+
+//used to convert duration string to ms number
+function parseDuration(durationStr: string): number{
+    const regex = /^(\d+)(ms|s|m|h)$/;
+    const match = durationStr.match(regex);
+    if(match == null) throw new Error("invalid time string given")
+    //convert
+    let result = Number(match[1])
+    if(match[2] === "s") result *= 1000;
+    else if(match[2] === "m") result *= 1000 * 60;
+    else if(match[2] === "h") result *= 1000 * 60 * 60;
+    return result;
+}
+
+async function scrapeFeeds(){
+    const next = await getNextFeedToFetch();
+    const rssFeed = await fetchFeed(next.url)
+    await markFeedFetched(next.id)
+    //console.log(JSON.stringify(rssFeed, null, 2))
+}
+
+function handleError(err: Error){
+    console.log(err.message);
 }
 
 // function to add a feed to db
@@ -116,6 +169,22 @@ export async function handlerAddFeed(name: string, user:User, ...args:string[]){
         const follow = await createFollowFeed(currentUser, newFeed)
         console.log(newFeed);
         console.log(currentUser);
+    }catch(err){
+        if(err instanceof Error) console.log(err.message);
+        else console.log("unknown error")
+        exit(1)
+    }
+}
+
+//used to delete a feed by url
+export async function handlerDelete(name: string, user:User, ...args:string[]){
+    if(args.length === 0){
+        console.log("expected url to be given")
+        exit(1)
+    }
+    try{
+        const url = args[0]
+        const deletedFeed = await deleteFeedByURL(url)
     }catch(err){
         if(err instanceof Error) console.log(err.message);
         else console.log("unknown error")

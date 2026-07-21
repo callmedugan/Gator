@@ -39,7 +39,7 @@ export async function fetchFeed(url:string):Promise<RSSFeed>{
 
     //store item field and handle array vs singular item
     const xmlItem = xml.rss.channel?.item;
-    console.log(typeof xmlItem)
+    //console.log(typeof xmlItem)
     if(Array.isArray(xmlItem)){
         for(const i of xmlItem){
             if(i.title === undefined || i.link === undefined || i.description === undefined || i.pubDate === undefined) continue;
