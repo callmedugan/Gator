@@ -1,10 +1,11 @@
 import { exit } from "node:process";
 import { readConfig, setUser } from "./config";
-import { createUser, getUser, getUserByID, getUsers, resetUsers, User } from "./db/queries/users";
-import { createFeed, deleteFeedByURL, Feed, getFeedByURL, getFeeds, getNextFeedToFetch, markFeedFetched } from "./db/queries/feed";
-import { fetchFeed } from "./rss";
-import { createFollowFeed, deleteFeedFollow, getFeedFollowsForUser } from "./db/queries/user_feed";
+import { createUser, getUser, getUserByID, getUsers, resetUsers, User } from "./lib/db/queries/users";
+import { createFeed, deleteFeedByURL, Feed, getFeedByURL, getFeeds, getNextFeedToFetch, markFeedFetched } from "./lib/db/queries/feed";
+import { fetchFeed, RSSFeed } from "./rss";
+import { createFollowFeed, deleteFeedFollow, getFeedFollowsForUser } from "./lib/db/queries/user_feed";
 import { userInfo } from "node:os";
+import { createPost, getPostsForUser } from "./lib/db/queries/posts";
 
 export type CommandsRegistry = Record<string, CommandHandler>
 
@@ -120,7 +121,7 @@ export async function handlerAgg(name: string, ...args:string[]){
     //add listener for when program is killed to clear interval
     await new Promise<void>((resolve) => {
         process.on("SIGINT", () => {
-            console.log("Shutting down feed aggregator...");
+            console.log("\nShutting down feed aggregator...");
             clearInterval(interval);
             resolve();
         });
@@ -141,14 +142,44 @@ function parseDuration(durationStr: string): number{
 }
 
 async function scrapeFeeds(){
-    const next = await getNextFeedToFetch();
-    const rssFeed = await fetchFeed(next.url)
-    await markFeedFetched(next.id)
-    //console.log(JSON.stringify(rssFeed, null, 2))
+    try{
+        const next:Feed = await getNextFeedToFetch();
+        await markFeedFetched(next.id)
+        const rssFeed:RSSFeed = await fetchFeed(next.url)
+        //console.log(JSON.stringify(rssFeed, null, 2))
+        //loop through items and attempt to insert
+        for(const item of rssFeed.channel.item){
+            try{
+                const post = await createPost(next, item)
+                console.log("Added post: " + post.title);
+            }catch(err){
+                console.log("Already added post for: " + item.link)
+            }
+        }
+    }catch(err){
+        if(err instanceof Error) console.log(err.message);
+        else console.log("unknown error")
+        //exit(1)
+    }
 }
 
 function handleError(err: Error){
     console.log(err.message);
+}
+
+// function view user posts starting with oldest
+export async function handlerBrowse(name: string, user:User, ...args:string[]){
+    const limit = args.length === 0 ? 2 : Number(args[0])
+    try{
+        const posts = await getPostsForUser(user, limit);
+        for(const p of posts){
+            console.log((p.publishedAt?.toLocaleDateString() || "") + " " +(p.title || ""));
+        }
+    }catch(err){
+        if(err instanceof Error) console.log(err.message);
+        else console.log("unknown error")
+        exit(1)
+    }
 }
 
 // function to add a feed to db

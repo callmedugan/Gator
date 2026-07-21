@@ -1,5 +1,5 @@
 import { readConfig, setUser } from "./config";
-import { CommandsRegistry, getLoggedInHandler, handlerAddFeed, handlerAgg, handlerDelete, handlerFeeds, handlerFollow, handlerFollowing, handlerLogin, handlerRegister, handlerReset, handlerUnfollow, handlerUsers, registerCommand, runCommand } from "./command";
+import { CommandsRegistry, getLoggedInHandler, handlerAddFeed, handlerAgg, handlerBrowse, handlerDelete, handlerFeeds, handlerFollow, handlerFollowing, handlerLogin, handlerRegister, handlerReset, handlerUnfollow, handlerUsers, registerCommand, runCommand } from "./command";
 import process, { exit } from "node:process";
 import { fetchFeed } from "./rss";
 
@@ -17,6 +17,7 @@ async function main() {
   registerCommand(registry, "following", getLoggedInHandler(handlerFollowing));
   registerCommand(registry, "unfollow", getLoggedInHandler(handlerUnfollow));
   registerCommand(registry, "delete", getLoggedInHandler(handlerDelete));
+  registerCommand(registry, "browse", getLoggedInHandler(handlerBrowse));
   //get the args that were supplied with the start command
   const args = process.argv.slice(2);
   if(args.length === 0){
